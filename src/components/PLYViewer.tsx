@@ -1,0 +1,96 @@
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
+
+function PointCloud({ url, color = '#1a1a1a', initialRotation }: { url: string; color?: string; initialRotation?: [number, number, number] }) {
+  const ref = useRef<THREE.Points>(null);
+  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
+
+  useEffect(() => {
+    setGeometry(null);
+    const loader = new PLYLoader();
+    loader.load(url, (geo) => {
+      if (initialRotation) {
+        geo.rotateX(initialRotation[0]);
+        geo.rotateY(initialRotation[1]);
+        geo.rotateZ(initialRotation[2]);
+      }
+      geo.center();
+      geo.computeBoundingSphere();
+      const s = 1.05 / (geo.boundingSphere?.radius || 1);
+      geo.scale(s, s, s);
+      setGeometry(geo);
+    });
+  }, [url, initialRotation]);
+
+  const c = useMemo(() => new THREE.Color(color), [color]);
+
+  // Adapt point size to vertex density — dense models need smaller dots
+  const vertexCount = geometry?.attributes.position?.count || 20000;
+  const densityScale = Math.min(1.0, 20000 / vertexCount);
+  const adaptedSize = 1.2 * (0.3 + 0.7 * densityScale);
+
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        vertexShader: `
+      uniform float uSize;
+      uniform float uPixelRatio;
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        float sizeVariation = 0.7 + 0.6 * fract(sin(dot(position.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        gl_PointSize = uSize * uPixelRatio * sizeVariation * (3.0 / -mvPosition.z);
+      }
+    `,
+        fragmentShader: `
+      uniform vec3 uColor;
+      void main() {
+        vec2 center = gl_PointCoord - vec2(0.5);
+        if (dot(center, center) > 0.25) discard;
+        gl_FragColor = vec4(uColor, 0.6);
+      }
+    `,
+        uniforms: {
+          uSize: { value: adaptedSize },
+          uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+          uColor: { value: c },
+        },
+        transparent: true,
+        depthWrite: false,
+      }),
+    [c, adaptedSize]
+  );
+
+  useFrame(() => {
+    if (ref.current) {
+      ref.current.rotation.y += 0.00345;
+    }
+  });
+
+  if (!geometry) return null;
+
+  return <points ref={ref} geometry={geometry} material={material} />;
+}
+
+interface PLYViewerProps {
+  modelUrl: string;
+  className?: string;
+  color?: string;
+  initialRotation?: [number, number, number];
+}
+
+export default function PLYViewer({ modelUrl, className, color, initialRotation }: PLYViewerProps) {
+  return (
+    <div className={`ply-viewer ${className || ''}`}>
+      <Canvas
+        camera={{ position: [0, 0, 2.8], fov: 45 }}
+        gl={{ alpha: true, antialias: true }}
+        style={{ background: 'transparent' }}
+      >
+        <PointCloud url={modelUrl} color={color} initialRotation={initialRotation} />
+      </Canvas>
+    </div>
+  );
+}
