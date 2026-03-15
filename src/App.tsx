@@ -294,6 +294,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <span className="header-title">Humanoids Atlas</span>
+        <span className="header-sub">Supply Chain & Landscape Explorer</span>
       </header>
 
       <nav className="component-nav">
