@@ -183,6 +183,11 @@ body {
   flex-shrink: 0;
 }
 
+/* ========== PLY VIEWER ========== */
+.ply-viewer {
+  touch-action: none;
+}
+
 /* ========== SKELETON VIEW ========== */
 .skeleton-view {
   flex: 1;
@@ -1286,4 +1291,133 @@ body {
 .company-view::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 2px;
+}
+
+/* ========== TABLET (max-width: 768px) ========== */
+@media (max-width: 768px) {
+  /* Padding reductions */
+  .header { padding: 10px 16px; gap: 8px; }
+  .country-filter { padding: 8px 16px; }
+  .component-nav { padding: 0 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .component-nav::-webkit-scrollbar { display: none; }
+  .component-btn { padding: 10px 10px; font-size: 10px; letter-spacing: 1px; white-space: nowrap; flex-shrink: 0; }
+  .oems-view { padding: 16px; }
+  .oem-image-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .component-info { padding: 16px; gap: 16px; }
+  .component-desc { font-size: 14px; }
+  .supply-chain { padding: 16px; }
+  .company-info { padding: 16px; gap: 10px; }
+  .company-desc { font-size: 14px; }
+  .company-section { padding: 16px; }
+  .company-image { padding: 16px; }
+  .used-by { padding: 16px; }
+  .geo-content { padding: 16px; gap: 28px; }
+  .footer { padding: 8px 16px; gap: 10px; }
+
+  /* Header subtitle */
+  .header-sub { display: none; }
+
+  /* Touch target increases */
+  .back-btn { padding: 8px 12px; min-height: 36px; }
+  .country-pill { padding: 8px 12px; }
+  .cut-toggle { padding: 8px 12px; }
+  .cut-reset { padding: 8px 10px; }
+  .chain-clear { padding: 8px 10px; }
+  .chain-entity { padding: 10px 12px; }
+  .rel-row { padding: 12px 14px; }
+  .cut-oem-row { padding: 10px 12px; }
+  .model-toggle__btn { padding: 8px 10px; }
+
+  /* 2-column layouts → 1 column */
+  .component-top { grid-template-columns: 1fr; }
+  .component-model { border-right: none; border-bottom: 1px solid var(--border); min-height: 280px; max-height: 320px; }
+  .company-top { grid-template-columns: 1fr; }
+  .company-model { border-right: none; border-bottom: 1px solid var(--border); min-height: 280px; }
+  .specs-grid { grid-template-columns: 1fr; gap: 0; }
+
+  /* Supply chain → vertical */
+  .chain-flow { flex-direction: column; gap: 8px; }
+  .chain-tier { flex: none; width: 100%; }
+  .chain-arrow { padding: 4px 0; margin-top: 0; font-size: 14px; justify-content: center; transform: rotate(90deg); }
+
+  /* Scoreboard → 1 column */
+  .scoreboard-grid { grid-template-columns: 1fr; }
+  .scoreboard-stat__value { font-size: 16px; }
+
+  /* Sovereignty bars */
+  .sovereignty-label { width: 100px; font-size: 10px; }
+  .sovereignty-bar { height: 24px; }
+  .sovereignty-seg { min-width: 18px; }
+  .sovereignty-seg__label { font-size: 8px; }
+
+  /* OEM nationality cards */
+  .oem-nationality-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+
+  /* Cut the wire controls → wrap */
+  .cut-controls { flex-wrap: wrap; }
+  .cut-comp-name { width: 100px; font-size: 10px; }
+
+  /* Footer */
+  .footer { flex-wrap: wrap; }
+  .footer-sep { display: none; }
+  .footer-right { margin-left: 0; width: 100%; }
+
+  /* OEM grid */
+  .oem-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+
+/* ========== PHONE (max-width: 480px) ========== */
+@media (max-width: 480px) {
+  /* Further padding reductions */
+  .header { padding: 8px 12px; }
+  .country-filter { padding: 6px 12px; }
+  .component-btn { padding: 8px 8px; font-size: 9px; letter-spacing: 0.5px; }
+  .oems-view { padding: 12px; }
+  .oem-image-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .component-info { padding: 12px; }
+  .component-desc { font-size: 13px; }
+  .supply-chain { padding: 12px; }
+  .company-info { padding: 12px; }
+  .company-desc { font-size: 13px; }
+  .company-section { padding: 12px; }
+  .geo-content { padding: 12px; gap: 20px; }
+  .footer { padding: 6px 12px; font-size: 9px; }
+
+  /* Component model height */
+  .component-model { min-height: 240px; max-height: 280px; }
+
+  /* Sovereignty rows → stacked */
+  .sovereignty-row { flex-direction: column; align-items: stretch; gap: 4px; }
+  .sovereignty-label { width: 100%; }
+  .sovereignty-count { align-self: flex-end; }
+
+  /* Cut rows → stacked */
+  .cut-comp-row { flex-direction: column; align-items: stretch; gap: 4px; }
+  .cut-comp-name { width: 100%; }
+  .cut-comp-stat { align-self: flex-end; }
+
+  /* OEM nat stats → vertical */
+  .oem-nat-stats { flex-direction: column; gap: 2px; }
+  .oem-nat-total { margin-left: 0; }
+
+  /* Scoreboard font */
+  .scoreboard-stat__value { font-size: 14px; }
+  .scoreboard-header { font-size: 11px; padding: 8px 12px; }
+
+  /* Section title */
+  .section-title { font-size: 10px; letter-spacing: 1.5px; margin-bottom: 12px; }
+
+  /* OEM nationality grid */
+  .oem-nationality-grid { grid-template-columns: 1fr; }
+
+  /* Chain entities */
+  .chain-entity { font-size: 11px; padding: 8px 10px; }
+
+  /* Bottleneck alert */
+  .bottleneck-alert { padding: 12px; }
+
+  /* Metric rows */
+  .metric-row { gap: 8px; }
+  .metric-label { font-size: 10px; }
+  .metric-value { font-size: 11px; }
 }
