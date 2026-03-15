@@ -1364,6 +1364,9 @@ body {
 
   /* OEM grid */
   .oem-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+  /* Hide "In Production" status on mobile */
+  .oem-image-card__status { display: none; }
 }
 
 /* ========== PHONE (max-width: 480px) ========== */
