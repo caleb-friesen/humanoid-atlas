@@ -302,7 +302,6 @@ export default function App() {
 
       <nav className="component-nav">
         {TABS.map((t) => {
-          const comp = componentCategories.find((c) => c.id === t.id);
           return (
             <button
               key={t.id}
