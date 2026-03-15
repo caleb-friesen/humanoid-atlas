@@ -293,7 +293,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <span className="header-title">Humanoids Atlas</span>
+        <span className="header-title">Humanoid Atlas</span>
         <span className="header-sub">Supply Chain & Landscape Explorer</span>
       </header>
 
