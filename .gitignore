@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Video recordings
+recordings
+public/clips
