@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 
-# PLY models (large binary files)
-public/models/*.ply
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
