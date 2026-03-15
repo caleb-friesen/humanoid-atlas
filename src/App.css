@@ -179,7 +179,75 @@ body {
 
 .component-model {
   min-height: 350px;
+  max-height: 450px;
   border-right: 1px solid var(--border);
+}
+
+.component-model--dual {
+  display: flex;
+  flex-direction: row;
+}
+
+.dual-model {
+  flex: 1;
+  position: relative;
+  min-height: 300px;
+}
+
+.dual-model:first-child {
+  border-right: 1px solid var(--border);
+}
+
+.dual-model .ply-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+.dual-model__label {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.model-toggle {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+}
+
+.model-toggle__btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.model-toggle__btn:hover {
+  color: var(--text);
+}
+
+.model-toggle__btn--active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+
+.component-model {
+  position: relative;
 }
 
 .component-model .ply-viewer {

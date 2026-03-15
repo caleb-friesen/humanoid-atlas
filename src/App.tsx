@@ -18,11 +18,63 @@ const TABS = [
   { id: 'pcbs', label: 'PCBs' },
 ];
 
+// Per-model spin speed multipliers (normalize perceived rotation speed)
+const MODEL_SPIN: Record<string, number> = {
+  '/models/skeleton.ply': 2.2,
+  '/models/battery.ply': 1.5,
+  '/models/bldc-motor.ply': 1.3,
+  '/models/harmonic-reducer.ply': 1.15,
+  '/models/bearings.ply': 1.3,
+  '/models/linear-actuator.ply': 1.043,
+  '/models/planetary-screw.ply': 1.13,
+  '/models/end-effector.ply': 1.44,
+};
+
+// Per-model scale overrides (default is 1.05 in PLYViewer)
+const MODEL_SCALE: Record<string, number> = {
+  '/models/harmonic-reducer.ply': 0.9,
+  '/models/bearings.ply': 0.9,
+  '/models/linear-actuator.ply': 1.5,
+  '/models/planetary-screw.ply': 1.3,
+};
+
 // Per-model orientation fixes (most models are fine, these need correction)
 const MODEL_ROTATIONS: Record<string, [number, number, number]> = {
   '/models/skeleton.ply': [-Math.PI / 2, 0, 0],
   '/models/end-effector.ply': [-Math.PI / 2, 0, 0],
-  '/models/planetary-screw.ply': [0, 0, Math.PI / 2],
+  '/models/planetary-screw.ply': [0, 0, 0],
+  '/models/linear-actuator.ply': [0, 0, -Math.PI / 2],
+  '/models/rotary-actuator.ply': [Math.PI / 2, 0, 0],
+  '/models/compute.ply': [-Math.PI / 2, 0, 0],
+  '/models/battery.ply': [-Math.PI / 2, 0, 0],
+  '/models/camera-sensor.ply': [Math.PI / 2, 0, 0],
+  '/models/bearings.ply': [Math.PI / 2, 0, 0],
+};
+
+const ACTUATOR_INFO = {
+  linear: {
+    description: 'Linear actuators convert rotary motion into push/pull force using planetary roller screws. They provide the high-force movements needed in legs and torso — extending and retracting to walk, squat, and lift. Tesla Optimus uses 14 linear actuators across three force classes. The planetary roller screw is the critical precision component, and a key supply chain bottleneck.',
+    keyMetrics: {
+      'Tesla Optimus Count': '14 linear actuators',
+      'Force Classes (Tesla)': '500N, 3900N, 8000N',
+      'Key Component': 'Planetary roller screw',
+      'Screw Ratio (Tesla)': '1:14',
+      'Bottleneck': 'Precision grinding for screws',
+      'Transmission': 'Motor → Planetary Roller Screw → Linear output',
+    },
+  },
+  rotary: {
+    description: 'Rotary actuators handle all joint movements — shoulders, elbows, hips, knees, wrists. Each is a self-contained module combining a frameless BLDC motor + harmonic reducer + dual encoders + torque sensor. The harmonic reducer alone accounts for ~36% of the actuator cost, making it the most expensive single component. Unitree achieves ~$300/unit through Chinese supply chain optimization.',
+    keyMetrics: {
+      'Tesla Optimus Count': '20 rotary actuators',
+      'Torque Classes (Tesla)': '20Nm, 110Nm, 180Nm',
+      'Cost Breakdown': 'Reducer 36%, Torque sensor 30%, Motor 13.5%',
+      'Unitree Cost': '~$300/unit',
+      'Encoders': '2 per rotary actuator',
+      'Design Trend': 'Quasi-Direct Drive (QDD)',
+      'Alt Approach': 'Tendon drive (1X Neo — no gearboxes)',
+    },
+  },
 };
 
 const COMPONENT_KEYWORDS: Record<string, string[]> = {
@@ -35,6 +87,8 @@ const COMPONENT_KEYWORDS: Record<string, string[]> = {
   batteries: ['battery cells', 'battery pack'],
   bearings: ['cross-roller bearings', 'ball bearings', 'bearings'],
   actuators_rotary: ['actuator modules', 'servo actuators'],
+  actuators_rotary_only: ['servo actuators'],
+  actuators_linear_only: ['actuator modules'],
   actuators_linear: ['actuator modules'],
   screws: ['planetary roller screws', 'roller screws'],
   sensors_tactile: [],
@@ -63,6 +117,7 @@ function getComponentChain(componentId: string) {
 export default function App() {
   const [activeTab, setActiveTab] = useState('skeleton');
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [actuatorType, setActuatorType] = useState<'linear' | 'rotary'>('linear');
 
   const selectedComponent = useMemo(
     () => (activeTab !== 'skeleton' ? componentCategories.find((c) => c.id === activeTab) : null),
@@ -74,10 +129,13 @@ export default function App() {
     [companyId]
   );
 
-  const chain = useMemo(
-    () => (activeTab !== 'skeleton' ? getComponentChain(activeTab) : null),
-    [activeTab]
-  );
+  const chain = useMemo(() => {
+    if (activeTab === 'skeleton' || activeTab === 'all_oems') return null;
+    if (activeTab === 'actuators_rotary') {
+      return getComponentChain(actuatorType === 'linear' ? 'actuators_linear_only' : 'actuators_rotary_only');
+    }
+    return getComponentChain(activeTab);
+  }, [activeTab, actuatorType]);
 
   const oems = companies.filter((c) => c.type === 'oem');
 
@@ -240,7 +298,7 @@ export default function App() {
         {/* Skeleton tab */}
         {activeTab === 'skeleton' && (
           <div className="skeleton-center">
-            <PLYViewer modelUrl="/models/skeleton.ply" color="#1a1a1a" initialRotation={MODEL_ROTATIONS['/models/skeleton.ply']} />
+            <PLYViewer modelUrl="/models/skeleton.ply" color="#1a1a1a" initialRotation={MODEL_ROTATIONS['/models/skeleton.ply']} spinSpeed={MODEL_SPIN['/models/skeleton.ply']} />
           </div>
         )}
 
@@ -266,36 +324,70 @@ export default function App() {
           <>
             <div className="component-top">
               <div className="component-model">
-                {selectedComponent.plyModel ? (
-                  <PLYViewer modelUrl={selectedComponent.plyModel} color="#1a1a1a" initialRotation={MODEL_ROTATIONS[selectedComponent.plyModel]} />
+                {activeTab === 'actuators_rotary' ? (
+                  <>
+                    <PLYViewer
+                      modelUrl={actuatorType === 'linear' ? '/models/linear-actuator.ply' : '/models/rotary-actuator.ply'}
+                      color="#1a1a1a"
+                      initialRotation={MODEL_ROTATIONS[actuatorType === 'linear' ? '/models/linear-actuator.ply' : '/models/rotary-actuator.ply']}
+                      spinSpeed={MODEL_SPIN[actuatorType === 'linear' ? '/models/linear-actuator.ply' : '/models/rotary-actuator.ply']}
+                      scale={MODEL_SCALE[actuatorType === 'linear' ? '/models/linear-actuator.ply' : '/models/rotary-actuator.ply']}
+                    />
+                    <div className="model-toggle">
+                      <button
+                        className={`model-toggle__btn ${actuatorType === 'linear' ? 'model-toggle__btn--active' : ''}`}
+                        onClick={() => setActuatorType('linear')}
+                      >
+                        Linear
+                      </button>
+                      <button
+                        className={`model-toggle__btn ${actuatorType === 'rotary' ? 'model-toggle__btn--active' : ''}`}
+                        onClick={() => setActuatorType('rotary')}
+                      >
+                        Rotary
+                      </button>
+                    </div>
+                  </>
+                ) : selectedComponent.plyModel ? (
+                  <PLYViewer modelUrl={selectedComponent.plyModel} color="#1a1a1a" initialRotation={MODEL_ROTATIONS[selectedComponent.plyModel]} spinSpeed={MODEL_SPIN[selectedComponent.plyModel]} scale={MODEL_SCALE[selectedComponent.plyModel]} />
                 ) : (
                   <div className="model-placeholder">No 3D model</div>
                 )}
               </div>
 
               <div className="component-info">
-                <p className="component-desc">{selectedComponent.description}</p>
+                {(() => {
+                  const isActuator = activeTab === 'actuators_rotary';
+                  const desc = isActuator ? ACTUATOR_INFO[actuatorType].description : selectedComponent.description;
+                  const metrics = isActuator ? ACTUATOR_INFO[actuatorType].keyMetrics : selectedComponent.keyMetrics;
 
-                {selectedComponent.bottleneck && (
-                  <div className="bottleneck-alert">
-                    <span className="bottleneck-icon">!</span>
-                    <div>
-                      <div className="bottleneck-title">Supply Chain Bottleneck</div>
-                      <p className="bottleneck-reason">{selectedComponent.bottleneckReason}</p>
-                    </div>
-                  </div>
-                )}
+                  return (
+                    <>
+                      <p className="component-desc">{desc}</p>
 
-                {selectedComponent.keyMetrics && (
-                  <div className="metrics">
-                    {Object.entries(selectedComponent.keyMetrics).map(([k, v]) => (
-                      <div key={k} className="metric-row">
-                        <span className="metric-label">{k}</span>
-                        <span className="metric-value">{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      {selectedComponent.bottleneck && (
+                        <div className="bottleneck-alert">
+                          <span className="bottleneck-icon">!</span>
+                          <div>
+                            <div className="bottleneck-title">Supply Chain Bottleneck</div>
+                            <p className="bottleneck-reason">{selectedComponent.bottleneckReason}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {metrics && (
+                        <div className="metrics">
+                          {Object.entries(metrics).map(([k, v]) => (
+                            <div key={k} className="metric-row">
+                              <span className="metric-label">{k}</span>
+                              <span className="metric-value">{v}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

@@ -3,7 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js';
 
-function PointCloud({ url, color = '#1a1a1a', initialRotation }: { url: string; color?: string; initialRotation?: [number, number, number] }) {
+function PointCloud({ url, color = '#1a1a1a', initialRotation, spinSpeed = 1, scale = 1.05 }: { url: string; color?: string; initialRotation?: [number, number, number]; spinSpeed?: number; scale?: number }) {
   const ref = useRef<THREE.Points>(null);
   const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
 
@@ -18,11 +18,11 @@ function PointCloud({ url, color = '#1a1a1a', initialRotation }: { url: string; 
       }
       geo.center();
       geo.computeBoundingSphere();
-      const s = 1.05 / (geo.boundingSphere?.radius || 1);
+      const s = scale / (geo.boundingSphere?.radius || 1);
       geo.scale(s, s, s);
       setGeometry(geo);
     });
-  }, [url, initialRotation]);
+  }, [url, initialRotation, scale]);
 
   const c = useMemo(() => new THREE.Color(color), [color]);
 
@@ -65,7 +65,7 @@ function PointCloud({ url, color = '#1a1a1a', initialRotation }: { url: string; 
 
   useFrame(() => {
     if (ref.current) {
-      ref.current.rotation.y += 0.00345;
+      ref.current.rotation.y += 0.012 * spinSpeed;
     }
   });
 
@@ -79,9 +79,11 @@ interface PLYViewerProps {
   className?: string;
   color?: string;
   initialRotation?: [number, number, number];
+  spinSpeed?: number;
+  scale?: number;
 }
 
-export default function PLYViewer({ modelUrl, className, color, initialRotation }: PLYViewerProps) {
+export default function PLYViewer({ modelUrl, className, color, initialRotation, spinSpeed, scale }: PLYViewerProps) {
   return (
     <div className={`ply-viewer ${className || ''}`}>
       <Canvas
@@ -89,7 +91,7 @@ export default function PLYViewer({ modelUrl, className, color, initialRotation 
         gl={{ alpha: true, antialias: true }}
         style={{ background: 'transparent' }}
       >
-        <PointCloud url={modelUrl} color={color} initialRotation={initialRotation} />
+        <PointCloud url={modelUrl} color={color} initialRotation={initialRotation} spinSpeed={spinSpeed} scale={scale} />
       </Canvas>
     </div>
   );

@@ -62,6 +62,7 @@ export interface ComponentCategory {
   name: string;
   description: string;
   plyModel?: string;
+  plyModel2?: string;
   avgCostPercent?: number;
   bottleneck: boolean;
   bottleneckReason?: string;
