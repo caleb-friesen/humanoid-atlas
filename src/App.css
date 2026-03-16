@@ -2921,3 +2921,227 @@ body {
   color: var(--text-dim);
   font-style: italic;
 }
+
+/* ========== COMPETITIVE COMPARISON VIEW ========== */
+
+/* 1. Main container */
+.compare-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+}
+
+/* 2. Side-by-side grid */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* 3. Company card */
+.compare-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.compare-card:hover {
+  border-color: var(--border-hover);
+}
+
+/* 4. Robot image */
+.compare-card__image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: #f0ede8;
+}
+
+/* 5. Company name */
+.compare-card__name {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* 6. Country + status meta */
+.compare-card__meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 7. Production status badge */
+.compare-card__status {
+  font-size: 9px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--green);
+  color: white;
+}
+
+/* 8. Specs list */
+.compare-card__specs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* 9. Spec row */
+.compare-card__spec {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+/* 10. Spec label */
+.compare-card__spec-label {
+  color: var(--text-dim);
+}
+
+/* 11. Spec value */
+.compare-card__spec-value {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text);
+  text-align: right;
+}
+
+/* 12. Section below grid */
+.compare-section {
+  margin-bottom: 20px;
+}
+
+/* 13. Section heading */
+.compare-section__title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* 14. Overlap container */
+.compare-overlap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 15. Overlap group */
+.compare-overlap__group {
+}
+
+/* 16. Group label */
+.compare-overlap__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+/* 17. Supplier names */
+.compare-overlap__list {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* 18. Geo exposure container */
+.compare-geo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 19. Geo bar row */
+.compare-geo__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 20. Company name label */
+.compare-geo__name {
+  min-width: 140px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+/* 21. Stacked bar */
+.compare-geo__bar {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* 22. Bar segment */
+.compare-geo__seg {
+  height: 100%;
+}
+
+/* 23. Percentage labels */
+.compare-geo__stats {
+  font-size: 11px;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text-dim);
+  min-width: 160px;
+  text-align: right;
+}
+
+/* 24. AI analysis text */
+.compare-analysis {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 25. "vs" label */
+.compare-vs {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ========== COMPARE VIEW TABLET (max-width: 768px) ========== */
+@media (max-width: 768px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-card__image {
+    height: 120px;
+  }
+
+  .compare-geo__name {
+    min-width: 100px;
+  }
+}
+
+/* ========== COMPARE VIEW PHONE (max-width: 480px) ========== */
+@media (max-width: 480px) {
+  .compare-view {
+    padding: 16px 12px;
+  }
+
+  .compare-card {
+    padding: 12px;
+  }
+}

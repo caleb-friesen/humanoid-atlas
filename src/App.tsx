@@ -654,6 +654,9 @@ export default function App() {
   const [companyChat, setCompanyChat] = useState('');
   const [companyChatAnswer, setCompanyChatAnswer] = useState<string | null>(null);
   const [companyChatLoading, setCompanyChatLoading] = useState(false);
+  const [compareIds, setCompareIds] = useState<[string, string] | null>(null);
+  const [compareAnalysis, setCompareAnalysis] = useState<string | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [nlQuery, setNlQuery] = useState('');
@@ -855,6 +858,162 @@ export default function App() {
   const handleBackFromCompany = () => {
     setCompanyId(null);
   };
+
+  // ==================== COMPARISON VIEW ====================
+  if (compareIds) {
+    const [idA, idB] = compareIds;
+    const compA = companies.find((c) => c.id === idA);
+    const compB = companies.find((c) => c.id === idB);
+    if (compA && compB) {
+      const suppliersA = new Set(relationships.filter((r) => r.to === idA).map((r) => r.from));
+      const suppliersB = new Set(relationships.filter((r) => r.to === idB).map((r) => r.from));
+      const customersA = new Set(relationships.filter((r) => r.from === idA).map((r) => r.to));
+      const customersB = new Set(relationships.filter((r) => r.from === idB).map((r) => r.to));
+      const allA = new Set([...suppliersA, ...customersA]);
+      const allB = new Set([...suppliersB, ...customersB]);
+      const shared = [...allA].filter((id) => allB.has(id)).map((id) => companies.find((c) => c.id === id)?.name).filter(Boolean) as string[];
+      const exclA = [...allA].filter((id) => !allB.has(id)).map((id) => companies.find((c) => c.id === id)?.name).filter(Boolean) as string[];
+      const exclB = [...allB].filter((id) => !allA.has(id)).map((id) => companies.find((c) => c.id === id)?.name).filter(Boolean) as string[];
+
+      const geoOf = (compId: string) => {
+        const rels = relationships.filter((r) => r.to === compId || r.from === compId);
+        const connIds = [...new Set(rels.map((r) => r.from === compId ? r.to : r.from))];
+        const conns = connIds.map((id) => companies.find((c) => c.id === id)).filter(Boolean) as typeof companies;
+        const total = conns.length || 1;
+        const us = conns.filter((c) => c.country === 'US').length;
+        const cn = conns.filter((c) => c.country === 'CN').length;
+        return { us: Math.round((us / total) * 100), cn: Math.round((cn / total) * 100), other: Math.round(((total - us - cn) / total) * 100) };
+      };
+      const geoA = geoOf(idA);
+      const geoB = geoOf(idB);
+
+      // Fetch AI analysis
+      if (!compareAnalysis && !compareLoading) {
+        setCompareLoading(true);
+        fetch('/api/compare', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            companyA: { name: compA.name, country: compA.country, bom: compA.robotSpecs?.bom, price: compA.robotSpecs?.price, status: compA.robotSpecs?.status, shipments: compA.robotSpecs?.shipments2025, supplierCount: allA.size },
+            companyB: { name: compB.name, country: compB.country, bom: compB.robotSpecs?.bom, price: compB.robotSpecs?.price, status: compB.robotSpecs?.status, shipments: compB.robotSpecs?.shipments2025, supplierCount: allB.size },
+            shared, exclusiveA: exclA, exclusiveB: exclB, geoA, geoB,
+          }),
+        })
+          .then((r) => r.json())
+          .then((d) => { if (d.analysis) setCompareAnalysis(d.analysis); })
+          .catch(() => {})
+          .finally(() => setCompareLoading(false));
+      }
+
+      const specRow = (label: string, valA: string | undefined, valB: string | undefined) => {
+        if (!valA && !valB) return null;
+        return { label, valA: valA || '—', valB: valB || '—' };
+      };
+      const specs = [
+        specRow('BOM', compA.robotSpecs?.bom, compB.robotSpecs?.bom),
+        specRow('Price', compA.robotSpecs?.price, compB.robotSpecs?.price),
+        specRow('Status', compA.robotSpecs?.status, compB.robotSpecs?.status),
+        specRow('Shipments', compA.robotSpecs?.shipments2025?.toLocaleString(), compB.robotSpecs?.shipments2025?.toLocaleString()),
+        specRow('Height', compA.robotSpecs?.height, compB.robotSpecs?.height),
+        specRow('Mass', compA.robotSpecs?.mass, compB.robotSpecs?.mass),
+        specRow('DOF', compA.robotSpecs?.totalDOF, compB.robotSpecs?.totalDOF),
+        specRow('Speed', compA.robotSpecs?.speed, compB.robotSpecs?.speed),
+        specRow('Runtime', compA.robotSpecs?.operatingTime, compB.robotSpecs?.operatingTime),
+      ].filter(Boolean) as { label: string; valA: string; valB: string }[];
+
+      return (
+        <div className="app">
+          <header className="header">
+            <button className="back-btn" onClick={() => { setCompareIds(null); setCompareAnalysis(null); }}>&larr;</button>
+            <span className="header-title">{compA.name} <span className="compare-vs">vs</span> {compB.name}</span>
+          </header>
+          <main className="compare-view">
+            <div className="compare-grid">
+              <div className="compare-card" onClick={() => { setCompareIds(null); setCompareAnalysis(null); handleSelectCompany(idA); }}>
+                {compA.robotImage && <img className="compare-card__image" src={compA.robotImage} alt={compA.name} />}
+                <div className="compare-card__name">{compA.name}</div>
+                <div className="compare-card__meta">
+                  {compA.country}
+                  {compA.robotSpecs?.status === 'In Production' && <span className="compare-card__status">In Production</span>}
+                </div>
+                <div className="compare-card__specs">
+                  {specs.map((s) => (
+                    <div key={s.label} className="compare-card__spec">
+                      <span className="compare-card__spec-label">{s.label}</span>
+                      <span className="compare-card__spec-value">{s.valA}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="compare-card" onClick={() => { setCompareIds(null); setCompareAnalysis(null); handleSelectCompany(idB); }}>
+                {compB.robotImage && <img className="compare-card__image" src={compB.robotImage} alt={compB.name} />}
+                <div className="compare-card__name">{compB.name}</div>
+                <div className="compare-card__meta">
+                  {compB.country}
+                  {compB.robotSpecs?.status === 'In Production' && <span className="compare-card__status">In Production</span>}
+                </div>
+                <div className="compare-card__specs">
+                  {specs.map((s) => (
+                    <div key={s.label} className="compare-card__spec">
+                      <span className="compare-card__spec-label">{s.label}</span>
+                      <span className="compare-card__spec-value">{s.valB}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="compare-section">
+              <div className="compare-section__title">Supply Chain Overlap</div>
+              <div className="compare-overlap">
+                <div className="compare-overlap__group">
+                  <div className="compare-overlap__label">Shared ({shared.length})</div>
+                  <div className="compare-overlap__list">{shared.join(', ') || 'None'}</div>
+                </div>
+                <div className="compare-overlap__group">
+                  <div className="compare-overlap__label">{compA.name} only ({exclA.length})</div>
+                  <div className="compare-overlap__list">{exclA.join(', ') || 'None'}</div>
+                </div>
+                <div className="compare-overlap__group">
+                  <div className="compare-overlap__label">{compB.name} only ({exclB.length})</div>
+                  <div className="compare-overlap__list">{exclB.join(', ') || 'None'}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="compare-section">
+              <div className="compare-section__title">Geopolitical Exposure</div>
+              <div className="compare-geo">
+                {[{ name: compA.name, geo: geoA }, { name: compB.name, geo: geoB }].map((row) => (
+                  <div key={row.name} className="compare-geo__row">
+                    <span className="compare-geo__name">{row.name}</span>
+                    <div className="compare-geo__bar">
+                      {row.geo.us > 0 && <div className="compare-geo__seg" style={{ width: `${row.geo.us}%`, background: '#3b82f6' }} />}
+                      {row.geo.cn > 0 && <div className="compare-geo__seg" style={{ width: `${row.geo.cn}%`, background: '#ef4444' }} />}
+                      {row.geo.other > 0 && <div className="compare-geo__seg" style={{ width: `${row.geo.other}%`, background: '#888' }} />}
+                    </div>
+                    <span className="compare-geo__stats">US {row.geo.us}% · CN {row.geo.cn}% · Other {row.geo.other}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="compare-section">
+              <div className="compare-section__title">AI Analysis</div>
+              {compareLoading ? (
+                <p className="compare-analysis" style={{ fontStyle: 'italic', color: 'var(--text-dim)' }}>Generating analysis...</p>
+              ) : compareAnalysis ? (
+                <p className="compare-analysis">{compareAnalysis}</p>
+              ) : null}
+            </div>
+          </main>
+          <footer className="footer">
+            <span>Data: Humanity's Last Machine + RoboStrategy · Maintained by <a href="https://x.com/JulianSaks" target="_blank" rel="noopener noreferrer">Julian Saks</a>{viewCount !== null && <span className="view-count"> · {viewCount.toLocaleString()} visits</span>}</span>
+          </footer>
+        </div>
+      );
+    }
+  }
 
   // ==================== COMPANY VIEW ====================
   if (companyId && selectedCompany) {
@@ -1146,7 +1305,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <span className="header-title">Humanoid Atlas</span>
-        <span className="header-sub">Humanoid Supply Chain & Landscape Explorer</span>
+        <span className="header-sub">Built For Humanoid Enthusiasts</span>
         <div className="search-wrapper" ref={searchRef}>
           <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -1165,7 +1324,20 @@ export default function App() {
             onKeyDown={(e) => {
               if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); setSmartAnswer(null); }
               if (e.key === 'Enter') {
-                if (isNlQuery && searchQuery.trim() && !smartLoading) {
+                // Detect "compare X vs Y" pattern
+                const compareMatch = searchQuery.trim().match(/^compare\s+(.+?)\s+(?:vs\.?|versus)\s+(.+)$/i);
+                if (compareMatch) {
+                  const nameA = compareMatch[1].trim().toLowerCase();
+                  const nameB = compareMatch[2].trim().toLowerCase();
+                  const compA = companies.find((c) => c.name.toLowerCase().includes(nameA));
+                  const compB = companies.find((c) => c.name.toLowerCase().includes(nameB));
+                  if (compA && compB) {
+                    setCompareIds([compA.id, compB.id]);
+                    setCompareAnalysis(null);
+                    setSearchOpen(false);
+                    setSearchQuery('');
+                  }
+                } else if (isNlQuery && searchQuery.trim() && !smartLoading) {
                   setSmartLoading(true);
                   setSmartAnswer(null);
                   fetch('/api/smart-search', {
