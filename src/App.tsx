@@ -1385,11 +1385,17 @@ export default function App() {
                   ))}
                 </div>
 
-                {activeScenarios.size > 0 && (
+                {(activeScenarios.size > 0 || cutCountries.size > 0 || cutCompanies.size > 0) && (
                   <div className="scenario-descs">
-                    {SCENARIOS.filter((s) => activeScenarios.has(s.id)).map((s) => (
-                      <div key={s.id} className="scenario-desc">{s.description}</div>
-                    ))}
+                    {aiLoading ? (
+                      <div className="scenario-desc" style={{ fontStyle: 'italic', color: 'var(--text-dim)' }}>Generating analysis...</div>
+                    ) : aiSummary ? (
+                      <div className="scenario-desc">{aiSummary}</div>
+                    ) : activeScenarios.size > 0 ? (
+                      SCENARIOS.filter((s) => activeScenarios.has(s.id)).map((s) => (
+                        <div key={s.id} className="scenario-desc">{s.description}</div>
+                      ))
+                    ) : null}
                   </div>
                 )}
 
@@ -1482,17 +1488,6 @@ export default function App() {
                           ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {(aiLoading || aiSummary) && (
-                  <div className="ai-summary">
-                    <h4 className="cut-subtitle">AI Analysis</h4>
-                    {aiLoading ? (
-                      <p className="ai-summary__loading">Generating analysis...</p>
-                    ) : (
-                      <p className="ai-summary__text">{aiSummary}</p>
                     )}
                   </div>
                 )}
