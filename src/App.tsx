@@ -645,6 +645,9 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [smartAnswer, setSmartAnswer] = useState<{ answer: string; companyIds: string[] } | null>(null);
   const [smartLoading, setSmartLoading] = useState(false);
+  const [thesis, setThesis] = useState<string | null>(null);
+  const [thesisLoading, setThesisLoading] = useState(false);
+  const thesisCache = useRef<Map<string, string>>(new Map());
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [nlQuery, setNlQuery] = useState('');
@@ -754,6 +757,51 @@ export default function App() {
       .catch(() => setAiSummary(null))
       .finally(() => setAiLoading(false));
   }, [cutCountries, cutCompanies, activeScenarios]);
+
+  // Fetch investment thesis for supplier detail pages
+  useEffect(() => {
+    if (!companyId) { setThesis(null); return; }
+    const company = companies.find((c) => c.id === companyId);
+    if (!company || company.type === 'oem') { setThesis(null); return; }
+    if (thesisCache.current.has(companyId)) {
+      setThesis(thesisCache.current.get(companyId)!);
+      return;
+    }
+    const oemIds = new Set(oems.map((c) => c.id));
+    const customerRels = relationships.filter((r) => r.from === companyId && oemIds.has(r.to));
+    const uniqueOemIds = [...new Set(customerRels.map((r) => r.to))];
+    const oemCustomers = uniqueOemIds
+      .map((id) => companies.find((c) => c.id === id))
+      .filter(Boolean)
+      .map((c) => ({ name: c!.name, country: c!.country }));
+    const componentLabel = SUPPLIER_COMPONENT_LABEL[companyId] || null;
+    const isBottleneck = componentLabel ? BOTTLENECK_COMPONENTS.has(componentLabel) : false;
+    const alternatives = componentLabel
+      ? companies.filter((s) => s.id !== companyId && s.type !== 'oem' && SUPPLIER_COMPONENT_LABEL[s.id] === componentLabel && relationships.some((r) => r.from === s.id && oemIds.has(r.to)))
+          .map((s) => ({ name: s.name, country: s.country }))
+      : [];
+
+    setThesisLoading(true);
+    fetch('/api/investment-thesis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: company.name, country: company.country, type: company.type,
+        description: company.description, marketShare: company.marketShare,
+        ticker: company.ticker, componentLabel, isBottleneck,
+        oemCount: oemCustomers.length, totalOems: oems.length,
+        alternatives, customers: oemCustomers,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const text = d.thesis || null;
+        if (text) thesisCache.current.set(companyId, text);
+        setThesis(text);
+      })
+      .catch(() => setThesis(null))
+      .finally(() => setThesisLoading(false));
+  }, [companyId]);
 
   const selectedComponent = useMemo(
     () => (activeTab !== 'skeleton' ? componentCategories.find((c) => c.id === activeTab) : null),
@@ -984,6 +1032,17 @@ export default function App() {
                 )}
               </div>
 
+              {(thesisLoading || thesis) && (
+                <div className="company-section">
+                  <h3 className="section-title">Supply Chain Analysis</h3>
+                  {thesisLoading ? (
+                    <p className="scenario-desc" style={{ fontStyle: 'italic', color: 'var(--text-dim)' }}>Generating analysis...</p>
+                  ) : (
+                    <p className="scenario-desc">{thesis}</p>
+                  )}
+                </div>
+              )}
+
             </>
           )}
 
@@ -1045,7 +1104,7 @@ export default function App() {
           <input
             className="search-input"
             type="text"
-            placeholder="Search the atlas..."
+            placeholder="Search & ask the atlas..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
