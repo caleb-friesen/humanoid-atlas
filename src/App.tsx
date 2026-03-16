@@ -12,6 +12,7 @@ const TABS = [
   { id: 'all_oems', label: 'All OEMs' },
   { id: 'geopolitics', label: 'Geopolitics' },
   { id: 'network', label: 'Network' },
+  { id: 'timeline', label: 'Timeline' },
   { id: 'sensors_general', label: 'Sensors' },
   { id: 'compute', label: 'Compute' },
   { id: 'batteries', label: 'Battery' },
@@ -409,6 +410,84 @@ const SUPPLIER_COMPONENT_LABEL: Record<string, string> = {
   psyonic: 'Hands', sharpa: 'Hands',
   google_deepmind: 'AI/ML',
   mp_materials: 'Rare Earths', lynas: 'Rare Earths', jl_mag: 'Rare Earths',
+};
+
+// --- Timeline data ---
+const MONTH_MAP: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+};
+
+function parseLaunchDate(s: string): number {
+  // "Aug 2023" → 2023.58, "Q1 2026" → 2026.0, "Feb 2019" → 2019.08
+  const monthMatch = s.match(/^(\w{3})\s+(\d{4})$/);
+  if (monthMatch) {
+    const month = MONTH_MAP[monthMatch[1]] ?? 0;
+    return parseInt(monthMatch[2]) + month / 12;
+  }
+  const qMatch = s.match(/^Q(\d)\s+(\d{4})$/);
+  if (qMatch) {
+    return parseInt(qMatch[2]) + (parseInt(qMatch[1]) - 1) * 0.25;
+  }
+  return 2025; // fallback
+}
+
+const TIMELINE_START = 2019;
+const TIMELINE_END = 2027;
+const TIMELINE_YEARS = Array.from({ length: TIMELINE_END - TIMELINE_START + 1 }, (_, i) => TIMELINE_START + i);
+
+function getTimelineData() {
+  const oemList = companies.filter((c) => c.type === 'oem');
+
+  const rows = oemList.map((oem) => {
+    const dateStr = oem.robotSpecs?.launchDate || '2025';
+    const dateNum = parseLaunchDate(dateStr);
+    const pct = ((dateNum - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100;
+    return {
+      id: oem.id,
+      name: oem.name,
+      country: oem.country,
+      countryGroup: getCountryGroup(oem.country),
+      dateStr,
+      dateNum,
+      pct: Math.max(0, Math.min(100, pct)),
+      inProduction: oem.robotSpecs?.status === 'In Production',
+      shipments: oem.robotSpecs?.shipments2025 || 0,
+    };
+  }).sort((a, b) => a.dateNum - b.dateNum);
+
+  // Group into lanes
+  const lanes: { group: string; label: string; rows: typeof rows }[] = [
+    { group: 'US', label: 'United States', rows: rows.filter((r) => r.countryGroup === 'US') },
+    { group: 'CN', label: 'China', rows: rows.filter((r) => r.countryGroup === 'CN') },
+    { group: 'OTHER', label: 'Rest of World', rows: rows.filter((r) => r.countryGroup === 'OTHER') },
+  ].filter((l) => l.rows.length > 0);
+
+  // Shipment summary
+  const maxShipments = Math.max(...rows.map((r) => r.shipments), 1);
+  const totalShipments = rows.reduce((s, r) => s + r.shipments, 0);
+  const shipmentsByGroup = lanes.map((l) => {
+    const total = l.rows.reduce((s, r) => s + r.shipments, 0);
+    return {
+      group: l.group,
+      label: l.label,
+      total,
+      pct: totalShipments > 0 ? Math.round((total / totalShipments) * 100) : 0,
+      barPct: maxShipments > 0 ? (total / maxShipments) * 100 : 0,
+    };
+  });
+
+  // "Now" marker position
+  const now = 2026.21; // ~March 2026
+  const nowPct = ((now - TIMELINE_START) / (TIMELINE_END - TIMELINE_START)) * 100;
+
+  return { lanes, shipmentsByGroup, totalShipments, nowPct, maxShipments };
+}
+
+const COUNTRY_GROUP_COLORS: Record<string, string> = {
+  US: '#3b82f6',
+  CN: '#ef4444',
+  OTHER: '#888',
 };
 
 // Component categories that are bottlenecks (from componentCategories data)
@@ -912,7 +991,7 @@ export default function App() {
         })}
       </nav>
 
-      <main className={activeTab === 'skeleton' ? 'skeleton-view' : activeTab === 'network' ? 'skeleton-view' : activeTab === 'geopolitics' ? 'geo-view' : 'component-view'}>
+      <main className={activeTab === 'skeleton' ? 'skeleton-view' : activeTab === 'network' ? 'skeleton-view' : activeTab === 'timeline' ? 'geo-view' : activeTab === 'geopolitics' ? 'geo-view' : 'component-view'}>
         {/* Skeleton tab */}
         {activeTab === 'skeleton' && (
           <div className="skeleton-center">
@@ -1314,8 +1393,92 @@ export default function App() {
           </div>
         )}
 
+        {/* Timeline tab */}
+        {activeTab === 'timeline' && (() => {
+          const tl = getTimelineData();
+          return (
+            <div className="timeline-view">
+              <div className="timeline-axis">
+                {TIMELINE_YEARS.map((y) => (
+                  <span key={y} className="timeline-axis__year">{y}</span>
+                ))}
+                <div className="timeline-axis__now" style={{ left: `${tl.nowPct}%` }} />
+              </div>
+
+              <div className="timeline-lanes">
+                {tl.lanes.map((lane) => (
+                  <div
+                    key={lane.group}
+                    className={`timeline-lane ${countryFilter && countryFilter !== lane.group ? 'timeline-lane--dim' : ''}`}
+                  >
+                    <div className="timeline-lane__header">{lane.label}</div>
+                    {lane.rows.map((row) => (
+                      <div
+                        key={row.id}
+                        className="timeline-row"
+                        onClick={() => handleSelectCompany(row.id)}
+                      >
+                        <div className="timeline-row__track">
+                          <div
+                            className="timeline-row__line"
+                            style={{ left: 0, width: `${row.pct}%` }}
+                          />
+                          <div
+                            className={`timeline-row__dot ${row.inProduction ? 'timeline-row__dot--production' : 'timeline-row__dot--prototype'}`}
+                            style={{ left: `${row.pct}%` }}
+                          />
+                          {row.shipments > 0 && (
+                            <div
+                              className="timeline-row__shipments"
+                              style={{
+                                left: `${row.pct}%`,
+                                width: `${Math.max(8, (row.shipments / tl.maxShipments) * 15)}%`,
+                                background: COUNTRY_GROUP_COLORS[row.countryGroup] || '#888',
+                              }}
+                            />
+                          )}
+                          <div
+                            className="timeline-row__label"
+                            style={{ left: `${row.pct}%` }}
+                          >
+                            <span className="timeline-row__name">{row.name}</span>
+                            <span className="timeline-row__date">{row.dateStr}</span>
+                            {row.inProduction && <span className="timeline-row__status">In Production</span>}
+                            {row.shipments > 0 && <span className="timeline-row__date">{row.shipments.toLocaleString()} units</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="timeline-summary">
+                <div className="timeline-summary__title">2025 Shipments by Region</div>
+                {tl.shipmentsByGroup.map((sg) => (
+                  <div key={sg.group} className="timeline-summary__row">
+                    <span className="timeline-summary__label">{sg.label}</span>
+                    <div className="timeline-summary__bar">
+                      <div
+                        className="timeline-summary__fill"
+                        style={{
+                          width: `${sg.barPct}%`,
+                          background: COUNTRY_GROUP_COLORS[sg.group] || '#888',
+                        }}
+                      />
+                    </div>
+                    <span className="timeline-summary__value">
+                      {sg.total.toLocaleString()} ({sg.pct}%)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Component tab */}
-        {activeTab !== 'skeleton' && activeTab !== 'all_oems' && activeTab !== 'geopolitics' && activeTab !== 'network' && selectedComponent && (
+        {activeTab !== 'skeleton' && activeTab !== 'all_oems' && activeTab !== 'geopolitics' && activeTab !== 'network' && activeTab !== 'timeline' && selectedComponent && (
           <>
             <div className="component-top">
               <div className="component-model">
