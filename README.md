@@ -38,8 +38,8 @@ Interactive supply chain intelligence platform for the humanoid robotics industr
 ### Setup
 
 ```bash
-git clone https://github.com/your-org/humanoid-terminal.git
-cd humanoid-terminal
+git clone https://github.com/kingjulio8238/humanoid-atlas.git
+cd humanoid-atlas
 pnpm install
 ```
 
