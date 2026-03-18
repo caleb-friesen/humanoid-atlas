@@ -682,6 +682,14 @@ export default function App() {
   const [cutCompanies, setCutCompanies] = useState<Set<string>>(new Set());
   const [activeScenarios, setActiveScenarios] = useState<Set<string>>(new Set());
   const [viewCount, setViewCount] = useState<number | null>(null);
+  const [likes, setLikes] = useState<Record<string, number>>({});
+  const [likedByMe, setLikedByMe] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('oem_likes') || '[]'));
+    } catch {
+      return new Set<string>();
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [smartAnswer, setSmartAnswer] = useState<{ answer: string; companyIds: string[] } | null>(null);
@@ -704,6 +712,11 @@ export default function App() {
   const [nlParsing, setNlParsing] = useState(false);
   const summaryCache = useRef<Map<string, string>>(new Map());
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const sortedOems = useMemo(
+    () => [...oems].sort((a, b) => (likes[b.id] || 0) - (likes[a.id] || 0)),
+    [likes],
+  );
 
   // Hash routing — update URL on state change
   useEffect(() => {
@@ -781,6 +794,10 @@ export default function App() {
     fetch('/api/views', { method: 'POST' })
       .then((r) => r.json())
       .then((d) => setViewCount(d.views))
+      .catch(() => {});
+    fetch('/api/likes')
+      .then((r) => r.json())
+      .then((d) => setLikes(d.likes || {}))
       .catch(() => {});
   }, []);
 
@@ -938,6 +955,22 @@ export default function App() {
     setCompanyChat('');
     setCompanyChatAnswer(null);
   }, []);
+
+  const handleLike = useCallback((oemId: string) => {
+    const removing = likedByMe.has(oemId);
+    setLikes((prev) => ({ ...prev, [oemId]: Math.max(0, (prev[oemId] || 0) + (removing ? -1 : 1)) }));
+    setLikedByMe((prev) => {
+      const next = new Set(prev);
+      if (removing) next.delete(oemId); else next.add(oemId);
+      try { localStorage.setItem('oem_likes', JSON.stringify([...next])); } catch { /* private browsing */ }
+      return next;
+    });
+    fetch('/api/likes', {
+      method: removing ? 'DELETE' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oemId }),
+    }).catch(() => {});
+  }, [likedByMe]);
 
   const handleBackFromCompany = () => {
     setCompanyId(null);
@@ -1546,8 +1579,8 @@ export default function App() {
           return (
             <div className="oems-view">
               <div className="oem-image-grid">
-                {oems.map((c) => (
-                  <button key={c.id} className={`oem-image-card ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`} onClick={() => handleSelectCompany(c.id)}>
+                {sortedOems.map((c) => (
+                  <div key={c.id} className={`oem-image-card ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`} onClick={() => handleSelectCompany(c.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') handleSelectCompany(c.id); }}>
                     <div className="oem-image-card__img">
                       {c.robotImage ? (
                         <img src={c.robotImage} alt={c.name} />
@@ -1557,12 +1590,19 @@ export default function App() {
                     </div>
                     <div className="oem-image-card__info">
                       <span className="oem-image-card__name">{c.name}</span>
+                      <button
+                        className={`oem-heart oem-heart--inline ${likedByMe.has(c.id) ? 'liked' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); handleLike(c.id); }}
+                        aria-label={likedByMe.has(c.id) ? 'Liked' : 'Like'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill={likedByMe.has(c.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                        <span className="oem-heart__count">{likes[c.id] || 0}</span>
+                      </button>
                       <span className="oem-image-card__country">{c.country}</span>
-                      {c.robotSpecs?.status === 'In Production' && (
-                        <span className="oem-image-card__status">In Production</span>
-                      )}
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
 
