@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import PLYViewer, { preloadPLY } from './components/PLYViewer';
 import SupplyChainGraph from './components/SupplyChainGraph';
-import { companies, relationships, componentCategories, vlaModels } from './data';
+import { companies, relationships, componentCategories, vlaModels, rewardModels } from './data';
+import type { RewardModelType } from './data';
 import './App.css';
 
 // Start fetching the skeleton model immediately on module load
@@ -35,6 +36,7 @@ const TABS: { id: string; label: string; group: TabGroup }[] = [
   { id: 'pcbs', label: 'PCBs', group: 'hardware' },
   // Software
   { id: 'vlas', label: 'VLA', group: 'software' },
+  { id: 'reward_models', label: 'Reward Models', group: 'software' },
 ];
 
 // Per-model spin speed multipliers (normalize perceived rotation speed)
@@ -431,6 +433,22 @@ function getVlaCompanyRelationshipLabel(type: 'proprietary' | 'partner') {
   return 'Partner Integration';
 }
 
+function getRewardModelTypeLabel(type: RewardModelType) {
+  if (type === 'trained') return 'Trained Model';
+  if (type === 'zero-shot') return 'Zero-Shot';
+  return 'Code Generation';
+}
+
+function getRewardModelOverview() {
+  return {
+    trackedModels: rewardModels.length,
+    trainedModels: rewardModels.filter((m) => m.modelType === 'trained').length,
+    zeroShotModels: rewardModels.filter((m) => m.modelType === 'zero-shot').length,
+    codeGenModels: rewardModels.filter((m) => m.modelType === 'code-gen').length,
+    developerCount: new Set(rewardModels.map((m) => m.developer)).size,
+  };
+}
+
 function getVLAOverview() {
   const linkedOemIds = new Set(
     vlaModels.flatMap((model) => model.companyLinks.map((link) => link.companyId))
@@ -701,6 +719,7 @@ export default function App() {
   const [actuatorType, setActuatorType] = useState<'linear' | 'rotary'>('linear');
   const [chainFocus, setChainFocus] = useState<string | null>(null);
   const [vlaFilter, setVlaFilter] = useState<'all' | 'open' | 'closed'>('all');
+  const [rewardFilter, setRewardFilter] = useState<'all' | RewardModelType>('all');
   const [countryFilter, setCountryFilter] = useState<CountryGroup>(null);
   const [cutCountries, setCutCountries] = useState<Set<string>>(new Set());
   const [cutCompanies, setCutCompanies] = useState<Set<string>>(new Set());
@@ -923,6 +942,7 @@ export default function App() {
   const chain = useMemo(() => {
     if (activeTab === 'skeleton' || activeTab === 'all_oems' || activeTab === 'geopolitics') return null;
     if (activeTab === 'vlas') return null;
+    if (activeTab === 'reward_models') return null;
     if (activeTab === 'actuators_rotary') {
       return getComponentChain(actuatorType === 'linear' ? 'actuators_linear_only' : 'actuators_rotary_only');
     }
@@ -954,6 +974,19 @@ export default function App() {
       .map((id) => companies.find((company) => company.id === id))
       .filter(Boolean) as typeof companies;
   }, [vlaFilter, filteredVlaModels]);
+
+  // Reward model state
+  const rewardOverview = useMemo(() => getRewardModelOverview(), []);
+
+  const focusedRewardModel = useMemo(
+    () => rewardModels.find((model) => model.id === chainFocus) || null,
+    [chainFocus]
+  );
+
+  const filteredRewardModels = useMemo(() => {
+    if (rewardFilter === 'all') return rewardModels;
+    return rewardModels.filter((m) => m.modelType === rewardFilter);
+  }, [rewardFilter]);
 
   // Compute which entities are connected to the focused entity in the chain
   const connectedIds = useMemo(() => {
@@ -2248,6 +2281,20 @@ export default function App() {
                         : `${vlaOverview.trackedModels} tracked models · ${vlaOverview.linkedOems} linked humanoid OEMs`}
                     </span>
                   </div>
+                ) : activeTab === 'reward_models' ? (
+                  <div className="vla-placeholder">
+                    <span className="vla-placeholder__eyebrow">
+                      {focusedRewardModel ? focusedRewardModel.developer : 'Robotic Reward Models'}
+                    </span>
+                    <span className="vla-placeholder__title">
+                      {focusedRewardModel ? focusedRewardModel.name : 'Reward Models'}
+                    </span>
+                    <span className="vla-placeholder__meta">
+                      {focusedRewardModel
+                        ? `${focusedRewardModel.country} · ${focusedRewardModel.release} · ${getRewardModelTypeLabel(focusedRewardModel.modelType)}`
+                        : `${rewardOverview.trackedModels} tracked models · ${rewardOverview.trainedModels} trained · ${rewardOverview.zeroShotModels} zero-shot · ${rewardOverview.codeGenModels} code-gen`}
+                    </span>
+                  </div>
                 ) : selectedComponent.plyModel ? (
                   <PLYViewer modelUrl={selectedComponent.plyModel} color="#1a1a1a" initialRotation={MODEL_ROTATIONS[selectedComponent.plyModel]} spinSpeed={MODEL_SPIN[selectedComponent.plyModel]} scale={MODEL_SCALE[selectedComponent.plyModel]} />
                 ) : (
@@ -2262,35 +2309,57 @@ export default function App() {
                     ? ACTUATOR_INFO[actuatorType].description
                     : activeTab === 'vlas' && focusedVlaModel
                       ? focusedVlaModel.description
-                      : selectedComponent.description;
+                      : activeTab === 'reward_models' && focusedRewardModel
+                        ? focusedRewardModel.description
+                        : selectedComponent.description;
                   const metrics = isActuator
                     ? ACTUATOR_INFO[actuatorType].keyMetrics
-                    : activeTab === 'vlas'
-                      ? focusedVlaModel
+                    : activeTab === 'reward_models'
+                      ? focusedRewardModel
                         ? {
-                            Developer: focusedVlaModel.developer,
-                            'Relationship Type': getVlaRelationshipTypeLabel(focusedVlaModel.relationshipType),
-                            Release: focusedVlaModel.release,
-                            Availability: focusedVlaModel.availability,
-                            Focus: focusedVlaModel.focus,
-                            'Linked OEMs': focusedVlaModel.companyLinks.length
-                              ? focusedVlaModel.companyLinks
-                                  .map((link) => {
-                                    const company = companies.find((candidate) => candidate.id === link.companyId);
-                                    return company ? `${company.name} (${getVlaCompanyRelationshipLabel(link.relationship)})` : null;
-                                  })
-                                  .filter(Boolean)
-                                  .join(', ')
-                              : 'None tracked in current dataset',
-                            Sources: focusedVlaModel.sources.map((source) => source.label).join(' · '),
+                            Developer: focusedRewardModel.developer,
+                            Type: getRewardModelTypeLabel(focusedRewardModel.modelType),
+                            Backbone: focusedRewardModel.backbone,
+                            Parameters: focusedRewardModel.params,
+                            Release: focusedRewardModel.release,
+                            Venue: focusedRewardModel.venue,
+                            Availability: focusedRewardModel.availability,
+                            Focus: focusedRewardModel.focus,
+                            Sources: focusedRewardModel.sources.map((s) => s.label).join(' · '),
                           }
                         : {
-                            'Tracked Models': `${vlaOverview.trackedModels} models (open + proprietary)`,
-                            'Linked OEMs': `${vlaOverview.linkedOems} humanoid OEMs with VLA integrations`,
-                            'Model Developers': `${vlaOverview.creatorCount} organizations building VLAs`,
-                            'Standalone Models': `${vlaOverview.standaloneModels} models without direct OEM ties`,
+                            'Tracked Models': `${rewardOverview.trackedModels} reward models`,
+                            'Trained Models': `${rewardOverview.trainedModels} with open weights`,
+                            'Zero-Shot Methods': `${rewardOverview.zeroShotModels} prompting-based approaches`,
+                            'Code Generation': `${rewardOverview.codeGenModels} LLM reward code generators`,
+                            Developers: `${rewardOverview.developerCount} organizations`,
                           }
-                      : selectedComponent.keyMetrics;
+                      : activeTab === 'vlas'
+                        ? focusedVlaModel
+                          ? {
+                              Developer: focusedVlaModel.developer,
+                              'Relationship Type': getVlaRelationshipTypeLabel(focusedVlaModel.relationshipType),
+                              Release: focusedVlaModel.release,
+                              Availability: focusedVlaModel.availability,
+                              Focus: focusedVlaModel.focus,
+                              'Linked OEMs': focusedVlaModel.companyLinks.length
+                                ? focusedVlaModel.companyLinks
+                                    .map((link) => {
+                                      const company = companies.find((candidate) => candidate.id === link.companyId);
+                                      return company ? `${company.name} (${getVlaCompanyRelationshipLabel(link.relationship)})` : null;
+                                    })
+                                    .filter(Boolean)
+                                    .join(', ')
+                                : 'None tracked in current dataset',
+                              Sources: focusedVlaModel.sources.map((source) => source.label).join(' · '),
+                            }
+                          : {
+                              'Tracked Models': `${vlaOverview.trackedModels} models (open + proprietary)`,
+                              'Linked OEMs': `${vlaOverview.linkedOems} humanoid OEMs with VLA integrations`,
+                              'Model Developers': `${vlaOverview.creatorCount} organizations building VLAs`,
+                              'Standalone Models': `${vlaOverview.standaloneModels} models without direct OEM ties`,
+                            }
+                        : selectedComponent.keyMetrics;
 
                   return (
                     <>
@@ -2381,6 +2450,43 @@ export default function App() {
                     {focusedVlaModel && focusedVlaModel.companyLinks.length === 0 && (
                       <div className="chain-empty">No humanoid OEM relationship tracked for {focusedVlaModel.name} in the current dataset.</div>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'reward_models' && (
+              <div className="supply-chain">
+                <div className="supply-chain__header">
+                  <h3 className="section-title">Model Directory</h3>
+                  <div className="vla-filters">
+                    <button className={`country-pill ${rewardFilter === 'all' ? 'country-pill--active' : ''}`} onClick={() => setRewardFilter('all')}>All</button>
+                    <button className={`country-pill ${rewardFilter === 'trained' ? 'country-pill--active' : ''}`} onClick={() => setRewardFilter(rewardFilter === 'trained' ? 'all' : 'trained')}>Trained</button>
+                    <button className={`country-pill ${rewardFilter === 'zero-shot' ? 'country-pill--active' : ''}`} onClick={() => setRewardFilter(rewardFilter === 'zero-shot' ? 'all' : 'zero-shot')}>Zero-Shot</button>
+                    <button className={`country-pill ${rewardFilter === 'code-gen' ? 'country-pill--active' : ''}`} onClick={() => setRewardFilter(rewardFilter === 'code-gen' ? 'all' : 'code-gen')}>Code Gen</button>
+                    {focusedRewardModel && (
+                      <button className="chain-clear" onClick={() => setChainFocus(null)}>
+                        CLEAR FILTER
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="chain-flow">
+                  <div className="chain-tier">
+                    <div className="chain-tier-label">Models</div>
+                    {filteredRewardModels.map((model) => (
+                      <button
+                        key={model.id}
+                        className={`chain-entity ${focusedRewardModel && focusedRewardModel.id !== model.id ? 'chain-entity--dim' : ''} ${focusedRewardModel?.id === model.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(model.country) !== countryFilter ? 'geo-dim' : ''}`}
+                        onClick={() => setChainFocus((prev) => prev === model.id ? null : model.id)}
+                      >
+                        <span className="chain-name">{model.name}</span>
+                        <span className="chain-country">{model.country}</span>
+                        <span className="chain-share">
+                          {model.developer} · {getRewardModelTypeLabel(model.modelType)}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>

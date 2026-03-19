@@ -70,6 +70,29 @@ export interface ComponentCategory {
   keyMetrics?: Record<string, string>;
 }
 
+export type RewardModelType = 'trained' | 'zero-shot' | 'code-gen';
+
+export interface RewardModelSourceRef {
+  label: string;
+  url: string;
+}
+
+export interface RewardModel {
+  id: string;
+  name: string;
+  developer: string;
+  country: Country;
+  modelType: RewardModelType;
+  description: string;
+  backbone: string;
+  params: string;
+  release: string;
+  venue: string;
+  availability: string;
+  focus: string;
+  sources: RewardModelSourceRef[];
+}
+
 export interface VLASourceRef {
   label: string;
   url: string;

@@ -135,6 +135,18 @@ export const componentCategories: ComponentCategory[] = [
     },
   },
   {
+    id: 'reward_models',
+    name: 'Reward Models',
+    description: 'Reward models evaluate how well a robot is performing a task by scoring video trajectories against language instructions. They provide the dense reward signals that VLA policies need for reinforcement learning, data filtering, and quality estimation — bridging the gap between human intent and robot behavior.',
+    bottleneck: false,
+    keyMetrics: {
+      'Core Input': 'Video trajectory + language instruction',
+      'Primary Output': 'Per-frame progress score (0-1), trajectory preference',
+      'Key Metric': 'VOC (Value-Order Correlation)',
+      'Current Focus': 'Dense reward for manipulation policy training',
+    },
+  },
+  {
     id: 'pcbs',
     name: 'PCBs',
     description: 'Printed circuit boards for power distribution, sensor integration, and compute interconnects.',
