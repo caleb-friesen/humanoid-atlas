@@ -44,7 +44,14 @@ export const rewardComparisons: RewardComparison[] = [
         scores: [0.25, 0.25, 0.25, 0.5, 0.5, 1.0, 0.75, 1.0, 0.75, 0.75],
         voc: 0.81,
       },
-      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
+      {
+        id: 'robometer',
+        name: 'Robometer',
+        color: '#A064DC',
+        dashPattern: [8, 3],
+        scores: [0.383, 0.437, 0.589, 0.595, 0.570, 0.434, 0.787, 0.702, 0.520, 0.605],
+        voc: 0.55,
+      },
       {
         id: 'gvl',
         name: 'GVL',
@@ -85,7 +92,14 @@ export const rewardComparisons: RewardComparison[] = [
         scores: [0.25, 0.0, 0.25, 0.0, 0.25, 0.25, 0.75, 0.75, 1.0, 1.0],
         voc: 0.85,
       },
-      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
+      {
+        id: 'robometer',
+        name: 'Robometer',
+        color: '#A064DC',
+        dashPattern: [8, 3],
+        scores: [0.221, 0.231, 0.331, 0.533, 0.662, 0.733, 0.803, 0.847, 0.827, 0.880],
+        voc: 0.99,
+      },
       {
         id: 'gvl',
         name: 'GVL',
@@ -126,7 +140,14 @@ export const rewardComparisons: RewardComparison[] = [
         scores: [0.0, 0.25, 0.25, 0.5, 0.75, 0.75, 0.75, 0.75, 0.75, 1.0],
         voc: 0.93,
       },
-      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
+      {
+        id: 'robometer',
+        name: 'Robometer',
+        color: '#A064DC',
+        dashPattern: [8, 3],
+        scores: [0.131, 0.240, 0.342, 0.429, 0.474, 0.660, 0.691, 0.683, 0.813, 0.914],
+        voc: 0.99,
+      },
       {
         id: 'gvl',
         name: 'GVL',
