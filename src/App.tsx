@@ -435,11 +435,21 @@ function getVLAOverview() {
   };
 }
 
-type CountryGroup = 'US' | 'CN' | 'OTHER' | null;
+type CountryGroup = 'US' | 'CN' | 'JP' | 'KR' | 'OTHER' | null;
 
+// Geopolitical grouping (US vs CN vs Other) — used for scoreboard analytics, supply chain bars, scenario cuts
 function getCountryGroup(country: string): 'US' | 'CN' | 'OTHER' {
   if (country === 'US') return 'US';
   if (country === 'CN') return 'CN';
+  return 'OTHER';
+}
+
+// Filter grouping — used for the country filter pills (distinguishes JP and KR)
+function getCountryFilterGroup(country: string): 'US' | 'CN' | 'JP' | 'KR' | 'OTHER' {
+  if (country === 'US') return 'US';
+  if (country === 'CN') return 'CN';
+  if (country === 'JP') return 'JP';
+  if (country === 'KR') return 'KR';
   return 'OTHER';
 }
 
@@ -497,7 +507,7 @@ function getTimelineData() {
       id: oem.id,
       name: oem.name,
       country: oem.country,
-      countryGroup: getCountryGroup(oem.country),
+      countryGroup: getCountryFilterGroup(oem.country),
       dateStr,
       dateNum,
       pct: Math.max(0, Math.min(100, pct)),
@@ -510,6 +520,8 @@ function getTimelineData() {
   const lanes: { group: string; label: string; rows: typeof rows }[] = [
     { group: 'US', label: 'United States', rows: rows.filter((r) => r.countryGroup === 'US') },
     { group: 'CN', label: 'China', rows: rows.filter((r) => r.countryGroup === 'CN') },
+    { group: 'JP', label: 'Japan', rows: rows.filter((r) => r.countryGroup === 'JP') },
+    { group: 'KR', label: 'South Korea', rows: rows.filter((r) => r.countryGroup === 'KR') },
     { group: 'OTHER', label: 'Rest of World', rows: rows.filter((r) => r.countryGroup === 'OTHER') },
   ].filter((l) => l.rows.length > 0);
 
@@ -1546,6 +1558,14 @@ export default function App() {
             onClick={() => setCountryFilter(countryFilter === 'CN' ? null : 'CN')}
           >China</button>
           <button
+            className={`country-pill ${countryFilter === 'JP' ? 'country-pill--active' : ''}`}
+            onClick={() => setCountryFilter(countryFilter === 'JP' ? null : 'JP')}
+          >Japan</button>
+          <button
+            className={`country-pill ${countryFilter === 'KR' ? 'country-pill--active' : ''}`}
+            onClick={() => setCountryFilter(countryFilter === 'KR' ? null : 'KR')}
+          >S. Korea</button>
+          <button
             className={`country-pill ${countryFilter === 'OTHER' ? 'country-pill--active' : ''}`}
             onClick={() => setCountryFilter(countryFilter === 'OTHER' ? null : 'OTHER')}
           >Other</button>
@@ -1580,7 +1600,7 @@ export default function App() {
             <div className="oems-view">
               <div className="oem-image-grid">
                 {sortedOems.map((c) => (
-                  <div key={c.id} className={`oem-image-card ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`} onClick={() => handleSelectCompany(c.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') handleSelectCompany(c.id); }}>
+                  <div key={c.id} className={`oem-image-card ${countryFilter && getCountryFilterGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`} onClick={() => handleSelectCompany(c.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') handleSelectCompany(c.id); }}>
                     <div className="oem-image-card__img">
                       {c.robotImage ? (
                         <img src={c.robotImage} alt={c.name} />
@@ -2294,7 +2314,7 @@ export default function App() {
                     {filteredVlaModels.map((model) => (
                       <button
                         key={model.id}
-                        className={`chain-entity ${focusedVlaModel && focusedVlaModel.id !== model.id ? 'chain-entity--dim' : ''} ${focusedVlaModel?.id === model.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryGroup(model.country) !== countryFilter ? 'geo-dim' : ''}`}
+                        className={`chain-entity ${focusedVlaModel && focusedVlaModel.id !== model.id ? 'chain-entity--dim' : ''} ${focusedVlaModel?.id === model.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(model.country) !== countryFilter ? 'geo-dim' : ''}`}
                         onClick={() => setChainFocus((prev) => prev === model.id ? null : model.id)}
                       >
                         <span className="chain-name">{model.name}</span>
@@ -2311,7 +2331,7 @@ export default function App() {
                     {linkedVlaOems.length > 0 ? linkedVlaOems.map((company) => (
                       <button
                         key={company.id}
-                        className={`chain-entity ${focusedVlaModel && !focusedVlaOemIds.has(company.id) ? 'chain-entity--dim' : ''} ${countryFilter && getCountryGroup(company.country) !== countryFilter ? 'geo-dim' : ''}`}
+                        className={`chain-entity ${focusedVlaModel && !focusedVlaOemIds.has(company.id) ? 'chain-entity--dim' : ''} ${countryFilter && getCountryFilterGroup(company.country) !== countryFilter ? 'geo-dim' : ''}`}
                         onClick={() => handleSelectCompany(company.id)}
                       >
                         <span className="chain-name">{company.name}</span>
@@ -2354,7 +2374,7 @@ export default function App() {
                       {chain.upstream.map((c) => c && (
                         <button
                           key={c.id}
-                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
+                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
                           onClick={(e) => {
                             if (chainFocus === c.id) { setChainFocus(null); }
                             else if (chainFocus) { setChainFocus(c.id); }
@@ -2377,7 +2397,7 @@ export default function App() {
                       {chain.suppliers.map((c) => c && (
                         <button
                           key={c.id}
-                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
+                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
                           onClick={() => {
                             if (chainFocus === c.id) { setChainFocus(null); }
                             else { setChainFocus(c.id); }
@@ -2400,7 +2420,7 @@ export default function App() {
                       {chain.oems.map((c) => c && (
                         <button
                           key={c.id}
-                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
+                          className={`chain-entity ${connectedIds && !connectedIds.has(c.id) ? 'chain-entity--dim' : ''} ${chainFocus === c.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(c.country) !== countryFilter ? 'geo-dim' : ''}`}
                           onClick={() => {
                             if (chainFocus === c.id) { setChainFocus(null); }
                             else { setChainFocus(c.id); }
