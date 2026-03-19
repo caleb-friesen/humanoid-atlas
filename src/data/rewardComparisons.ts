@@ -29,6 +29,23 @@ export const rewardComparisons: RewardComparison[] = [
     numFrames: 10,
     models: [
       {
+        id: 'topreward',
+        name: 'TOPReward',
+        color: '#DC2828',
+        dashPattern: [],
+        scores: [0.0, 0.287, 0.487, 0.713, 0.554, 0.573, 0.629, 0.873, 1.0, 0.888],
+        voc: 0.92,
+      },
+      {
+        id: 'roboreward',
+        name: 'RoboReward',
+        color: '#F5761A',
+        dashPattern: [5, 3],
+        scores: [0.25, 0.25, 0.25, 0.5, 0.5, 1.0, 0.75, 1.0, 0.75, 0.75],
+        voc: 0.81,
+      },
+      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
+      {
         id: 'gvl',
         name: 'GVL',
         color: '#4A90D9',
@@ -44,10 +61,6 @@ export const rewardComparisons: RewardComparison[] = [
         scores: [0.5, 0.5, 0.5, 0.5, 0.6, 0.5, 0.6, 0.6, 0.6, 0.6],
         voc: 0.62,
       },
-      // GPU models (pending A100 run):
-      // { id: 'topreward', name: 'TOPReward', color: '#DC2828', dashPattern: [], scores: [...], voc: ... },
-      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
-      // { id: 'roboreward', name: 'RoboReward', color: '#F5761A', dashPattern: [5, 3], scores: [...], voc: ... },
     ],
   },
   {
@@ -56,6 +69,23 @@ export const rewardComparisons: RewardComparison[] = [
     videoUrl: '/demos/gpu_rail_insert.mp4',
     numFrames: 10,
     models: [
+      {
+        id: 'topreward',
+        name: 'TOPReward',
+        color: '#DC2828',
+        dashPattern: [],
+        scores: [0.284, 0.0, 0.284, 0.561, 0.648, 0.685, 0.955, 1.0, 0.974, 0.985],
+        voc: 0.95,
+      },
+      {
+        id: 'roboreward',
+        name: 'RoboReward',
+        color: '#F5761A',
+        dashPattern: [5, 3],
+        scores: [0.25, 0.0, 0.25, 0.0, 0.25, 0.25, 0.75, 0.75, 1.0, 1.0],
+        voc: 0.85,
+      },
+      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
       {
         id: 'gvl',
         name: 'GVL',
@@ -80,6 +110,23 @@ export const rewardComparisons: RewardComparison[] = [
     videoUrl: '/demos/tshirt_fold.mp4',
     numFrames: 10,
     models: [
+      {
+        id: 'topreward',
+        name: 'TOPReward',
+        color: '#DC2828',
+        dashPattern: [],
+        scores: [0.0, 0.910, 0.988, 0.992, 0.989, 0.995, 0.992, 0.995, 0.993, 1.0],
+        voc: 0.90,
+      },
+      {
+        id: 'roboreward',
+        name: 'RoboReward',
+        color: '#F5761A',
+        dashPattern: [5, 3],
+        scores: [0.0, 0.25, 0.25, 0.5, 0.75, 0.75, 0.75, 0.75, 0.75, 1.0],
+        voc: 0.93,
+      },
+      // { id: 'robometer', name: 'Robometer', color: '#A064DC', dashPattern: [8, 3], scores: [...], voc: ... },
       {
         id: 'gvl',
         name: 'GVL',
