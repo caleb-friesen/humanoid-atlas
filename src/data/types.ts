@@ -107,6 +107,30 @@ export interface VLACompanyLink {
   sources: VLASourceRef[];
 }
 
+export type WorldModelType = 'video-generation' | 'latent-dynamics' | 'rl-imagination' | 'foundation-platform';
+
+export interface WorldModelSourceRef {
+  label: string;
+  url: string;
+}
+
+export interface WorldModel {
+  id: string;
+  name: string;
+  developer: string;
+  country: Country;
+  modelType: WorldModelType;
+  description: string;
+  backbone?: string;
+  params?: string;
+  trainingData?: string;
+  release: string;
+  venue: string;
+  availability: string;
+  focus: string;
+  sources: WorldModelSourceRef[];
+}
+
 export interface VLAModel {
   id: string;
   name: string;

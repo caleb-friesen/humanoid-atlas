@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import PLYViewer, { preloadPLY } from './components/PLYViewer';
 import SupplyChainGraph from './components/SupplyChainGraph';
-import { companies, relationships, componentCategories, vlaModels, rewardModels, rewardComparisons } from './data';
-import type { RewardModelType } from './data';
+import { companies, relationships, componentCategories, vlaModels, rewardModels, rewardComparisons, worldModels } from './data';
+import type { RewardModelType, WorldModelType } from './data';
 import RewardChart from './components/RewardChart';
 import './App.css';
 
@@ -38,6 +38,7 @@ const TABS: { id: string; label: string; group: TabGroup }[] = [
   // Software
   { id: 'vlas', label: 'VLA', group: 'software' },
   { id: 'reward_models', label: 'Reward Models', group: 'software' },
+  { id: 'world_models', label: 'World Models', group: 'software' },
 ];
 
 // Per-model spin speed multipliers (normalize perceived rotation speed)
@@ -450,6 +451,24 @@ function getRewardModelOverview() {
   };
 }
 
+function getWorldModelTypeLabel(type: WorldModelType) {
+  if (type === 'video-generation') return 'Video Generation';
+  if (type === 'latent-dynamics') return 'Latent Dynamics';
+  if (type === 'rl-imagination') return 'RL / Imagination';
+  return 'Foundation Platform';
+}
+
+function getWorldModelOverview() {
+  return {
+    trackedModels: worldModels.length,
+    videoGenModels: worldModels.filter((m) => m.modelType === 'video-generation').length,
+    latentDynModels: worldModels.filter((m) => m.modelType === 'latent-dynamics').length,
+    rlImaginModels: worldModels.filter((m) => m.modelType === 'rl-imagination').length,
+    foundationModels: worldModels.filter((m) => m.modelType === 'foundation-platform').length,
+    developerCount: new Set(worldModels.map((m) => m.developer)).size,
+  };
+}
+
 function getVLAOverview() {
   const linkedOemIds = new Set(
     vlaModels.flatMap((model) => model.companyLinks.map((link) => link.companyId))
@@ -721,6 +740,7 @@ export default function App() {
   const [chainFocus, setChainFocus] = useState<string | null>(null);
   const [vlaFilter, setVlaFilter] = useState<'all' | 'open' | 'closed'>('all');
   const [rewardFilter, setRewardFilter] = useState<'all' | RewardModelType>('all');
+  const [worldModelFilter, setWorldModelFilter] = useState<'all' | WorldModelType>('all');
   const [countryFilter, setCountryFilter] = useState<CountryGroup>(null);
   const [cutCountries, setCutCountries] = useState<Set<string>>(new Set());
   const [cutCompanies, setCutCompanies] = useState<Set<string>>(new Set());
@@ -944,6 +964,7 @@ export default function App() {
     if (activeTab === 'skeleton' || activeTab === 'all_oems' || activeTab === 'geopolitics') return null;
     if (activeTab === 'vlas') return null;
     if (activeTab === 'reward_models') return null;
+    if (activeTab === 'world_models') return null;
     if (activeTab === 'actuators_rotary') {
       return getComponentChain(actuatorType === 'linear' ? 'actuators_linear_only' : 'actuators_rotary_only');
     }
@@ -988,6 +1009,19 @@ export default function App() {
     if (rewardFilter === 'all') return rewardModels;
     return rewardModels.filter((m) => m.modelType === rewardFilter);
   }, [rewardFilter]);
+
+  // World model state
+  const worldModelOverview = useMemo(() => getWorldModelOverview(), []);
+
+  const focusedWorldModel = useMemo(
+    () => worldModels.find((model) => model.id === chainFocus) || null,
+    [chainFocus]
+  );
+
+  const filteredWorldModels = useMemo(() => {
+    if (worldModelFilter === 'all') return worldModels;
+    return worldModels.filter((m) => m.modelType === worldModelFilter);
+  }, [worldModelFilter]);
 
   // Compute which entities are connected to the focused entity in the chain
   const connectedIds = useMemo(() => {
@@ -2314,6 +2348,20 @@ export default function App() {
                         : `${rewardOverview.trackedModels} tracked models · ${rewardOverview.trainedModels} trained · ${rewardOverview.zeroShotModels} zero-shot · ${rewardOverview.codeGenModels} code-gen`}
                     </span>
                   </div>
+                ) : activeTab === 'world_models' ? (
+                  <div className="vla-placeholder">
+                    <span className="vla-placeholder__eyebrow">
+                      {focusedWorldModel ? focusedWorldModel.developer : 'Robotic World Models'}
+                    </span>
+                    <span className="vla-placeholder__title">
+                      {focusedWorldModel ? focusedWorldModel.name : 'World Models'}
+                    </span>
+                    <span className="vla-placeholder__meta">
+                      {focusedWorldModel
+                        ? `${focusedWorldModel.country} · ${focusedWorldModel.release} · ${getWorldModelTypeLabel(focusedWorldModel.modelType)}`
+                        : `${worldModelOverview.trackedModels} tracked · ${worldModelOverview.videoGenModels} video gen · ${worldModelOverview.latentDynModels} latent · ${worldModelOverview.rlImaginModels} RL/imagination · ${worldModelOverview.foundationModels} platform`}
+                    </span>
+                  </div>
                 ) : selectedComponent.plyModel ? (
                   <PLYViewer modelUrl={selectedComponent.plyModel} color="#1a1a1a" initialRotation={MODEL_ROTATIONS[selectedComponent.plyModel]} spinSpeed={MODEL_SPIN[selectedComponent.plyModel]} scale={MODEL_SCALE[selectedComponent.plyModel]} />
                 ) : (
@@ -2330,7 +2378,9 @@ export default function App() {
                       ? focusedVlaModel.description
                       : activeTab === 'reward_models' && focusedRewardModel
                         ? focusedRewardModel.description
-                        : selectedComponent.description;
+                        : activeTab === 'world_models' && focusedWorldModel
+                          ? focusedWorldModel.description
+                          : selectedComponent.description;
                   const metrics = isActuator
                     ? ACTUATOR_INFO[actuatorType].keyMetrics
                     : activeTab === 'reward_models'
@@ -2353,32 +2403,54 @@ export default function App() {
                             'Code Generation': `${rewardOverview.codeGenModels} LLM reward code generators`,
                             Developers: `${rewardOverview.developerCount} organizations`,
                           }
-                      : activeTab === 'vlas'
-                        ? focusedVlaModel
+                      : activeTab === 'world_models'
+                        ? focusedWorldModel
                           ? {
-                              Developer: focusedVlaModel.developer,
-                              'Relationship Type': getVlaRelationshipTypeLabel(focusedVlaModel.relationshipType),
-                              Release: focusedVlaModel.release,
-                              Availability: focusedVlaModel.availability,
-                              Focus: focusedVlaModel.focus,
-                              'Linked OEMs': focusedVlaModel.companyLinks.length
-                                ? focusedVlaModel.companyLinks
-                                    .map((link) => {
-                                      const company = companies.find((candidate) => candidate.id === link.companyId);
-                                      return company ? `${company.name} (${getVlaCompanyRelationshipLabel(link.relationship)})` : null;
-                                    })
-                                    .filter(Boolean)
-                                    .join(', ')
-                                : 'None tracked in current dataset',
-                              Sources: focusedVlaModel.sources.map((source) => source.label).join(' · '),
+                              Developer: focusedWorldModel.developer,
+                              Type: getWorldModelTypeLabel(focusedWorldModel.modelType),
+                              ...(focusedWorldModel.backbone ? { Backbone: focusedWorldModel.backbone } : {}),
+                              ...(focusedWorldModel.params ? { Parameters: focusedWorldModel.params } : {}),
+                              ...(focusedWorldModel.trainingData ? { 'Training Data': focusedWorldModel.trainingData } : {}),
+                              Release: focusedWorldModel.release,
+                              Venue: focusedWorldModel.venue,
+                              Availability: focusedWorldModel.availability,
+                              Focus: focusedWorldModel.focus,
+                              Sources: focusedWorldModel.sources.map((s) => s.label).join(' · '),
                             }
                           : {
-                              'Tracked Models': `${vlaOverview.trackedModels} models (open + proprietary)`,
-                              'Linked OEMs': `${vlaOverview.linkedOems} humanoid OEMs with VLA integrations`,
-                              'Model Developers': `${vlaOverview.creatorCount} organizations building VLAs`,
-                              'Standalone Models': `${vlaOverview.standaloneModels} models without direct OEM ties`,
+                              'Tracked Models': `${worldModelOverview.trackedModels} world models`,
+                              'Video Generation': `${worldModelOverview.videoGenModels} video prediction models`,
+                              'Latent Dynamics': `${worldModelOverview.latentDynModels} latent-space models`,
+                              'RL / Imagination': `${worldModelOverview.rlImaginModels} imagination-based RL agents`,
+                              'Foundation Platforms': `${worldModelOverview.foundationModels} full platforms`,
+                              Developers: `${worldModelOverview.developerCount} organizations`,
                             }
-                        : selectedComponent.keyMetrics;
+                        : activeTab === 'vlas'
+                          ? focusedVlaModel
+                            ? {
+                                Developer: focusedVlaModel.developer,
+                                'Relationship Type': getVlaRelationshipTypeLabel(focusedVlaModel.relationshipType),
+                                Release: focusedVlaModel.release,
+                                Availability: focusedVlaModel.availability,
+                                Focus: focusedVlaModel.focus,
+                                'Linked OEMs': focusedVlaModel.companyLinks.length
+                                  ? focusedVlaModel.companyLinks
+                                      .map((link) => {
+                                        const company = companies.find((candidate) => candidate.id === link.companyId);
+                                        return company ? `${company.name} (${getVlaCompanyRelationshipLabel(link.relationship)})` : null;
+                                      })
+                                      .filter(Boolean)
+                                      .join(', ')
+                                  : 'None tracked in current dataset',
+                                Sources: focusedVlaModel.sources.map((source) => source.label).join(' · '),
+                              }
+                            : {
+                                'Tracked Models': `${vlaOverview.trackedModels} models (open + proprietary)`,
+                                'Linked OEMs': `${vlaOverview.linkedOems} humanoid OEMs with VLA integrations`,
+                                'Model Developers': `${vlaOverview.creatorCount} organizations building VLAs`,
+                                'Standalone Models': `${vlaOverview.standaloneModels} models without direct OEM ties`,
+                              }
+                          : selectedComponent.keyMetrics;
 
                   return (
                     <>
@@ -2512,6 +2584,44 @@ export default function App() {
                         <span className="chain-country">{model.country}</span>
                         <span className="chain-share">
                           {model.developer} · {getRewardModelTypeLabel(model.modelType)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'world_models' && (
+              <div className="supply-chain">
+                <div className="supply-chain__header">
+                  <h3 className="section-title">Model Directory</h3>
+                  <div className="vla-filters">
+                    <button className={`country-pill ${worldModelFilter === 'all' ? 'country-pill--active' : ''}`} onClick={() => setWorldModelFilter('all')}>All</button>
+                    <button className={`country-pill ${worldModelFilter === 'video-generation' ? 'country-pill--active' : ''}`} onClick={() => setWorldModelFilter(worldModelFilter === 'video-generation' ? 'all' : 'video-generation')}>Video Gen</button>
+                    <button className={`country-pill ${worldModelFilter === 'latent-dynamics' ? 'country-pill--active' : ''}`} onClick={() => setWorldModelFilter(worldModelFilter === 'latent-dynamics' ? 'all' : 'latent-dynamics')}>Latent Dynamics</button>
+                    <button className={`country-pill ${worldModelFilter === 'rl-imagination' ? 'country-pill--active' : ''}`} onClick={() => setWorldModelFilter(worldModelFilter === 'rl-imagination' ? 'all' : 'rl-imagination')}>RL / Imagination</button>
+                    <button className={`country-pill ${worldModelFilter === 'foundation-platform' ? 'country-pill--active' : ''}`} onClick={() => setWorldModelFilter(worldModelFilter === 'foundation-platform' ? 'all' : 'foundation-platform')}>Platform</button>
+                    {focusedWorldModel && (
+                      <button className="chain-clear" onClick={() => setChainFocus(null)}>
+                        CLEAR FILTER
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="chain-flow">
+                  <div className="chain-tier">
+                    <div className="chain-tier-label">Models</div>
+                    {filteredWorldModels.map((model) => (
+                      <button
+                        key={model.id}
+                        className={`chain-entity ${focusedWorldModel && focusedWorldModel.id !== model.id ? 'chain-entity--dim' : ''} ${focusedWorldModel?.id === model.id ? 'chain-entity--focused' : ''} ${countryFilter && getCountryFilterGroup(model.country) !== countryFilter ? 'geo-dim' : ''}`}
+                        onClick={() => setChainFocus((prev) => prev === model.id ? null : model.id)}
+                      >
+                        <span className="chain-name">{model.name}</span>
+                        <span className="chain-country">{model.country}</span>
+                        <span className="chain-share">
+                          {model.developer} · {getWorldModelTypeLabel(model.modelType)}
                         </span>
                       </button>
                     ))}

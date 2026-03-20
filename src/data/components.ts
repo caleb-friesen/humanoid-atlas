@@ -147,6 +147,18 @@ export const componentCategories: ComponentCategory[] = [
     },
   },
   {
+    id: 'world_models',
+    name: 'World Models',
+    description: 'World models learn to simulate how the physical world evolves in response to robot actions. By predicting future states — as video frames, latent representations, or learned dynamics — they let robots practice tasks "in imagination" before acting in reality. This dramatically reduces the need for expensive real-world data collection and enables safer, faster policy training.',
+    bottleneck: false,
+    keyMetrics: {
+      'Core Function': 'Predict future world state from actions',
+      'Output Modalities': 'Video frames, latent states, dynamics rollouts',
+      'Key Benefit': 'Train policies in imagination, not reality',
+      'Current Focus': 'Cross-embodiment generalization + synthetic data',
+    },
+  },
+  {
     id: 'pcbs',
     name: 'PCBs',
     description: 'Printed circuit boards for power distribution, sensor integration, and compute interconnects.',
